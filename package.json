@@ -1,0 +1,23 @@
+{
+  "name": "video-hub-desktop",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "main/main.js",
+  "scripts": {
+    "dev": "vite --host",
+    "electron": "electron .",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^39.2.1",
+    "vite": "^7.2.2"
+  }
+}

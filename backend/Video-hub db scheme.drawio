@@ -1,0 +1,61 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.0.6 Chrome/138.0.7204.100 Electron/37.2.3 Safari/537.36" version="28.0.6">
+  <diagram name="Sayfa -1" id="oBp19wCtav5TIGc5h2Mw">
+    <mxGraphModel dx="2864" dy="1201" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-1" value="VİDEO-HUB DB SCHEME" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="70" width="740" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-3" value="SERİES" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-10" y="170" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-4" value="SERİE_ID(pk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-10" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-5" value="SERİE_NAME" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-7" value="EPİSODES" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="170" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-8" value="EPISODE_NUMBER" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-9" value="SERIE_ID(fk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="230" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-13" value="USER" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="630" y="170" width="360" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-14" value="USER_ID(pk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="630" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-15" value="USER_NAME" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-16" value="USER_PASSWORD" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="870" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-18" value="EPİSODE_ID(pk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="230" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-21" value="USER EPİSODE" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="170" width="480" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-22" value="USER_ID(fk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-23" value="EPISODE_ID(fk)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-24" value="WATCHED" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vD-PtmnCg0QDpX6JCJuu-25" value="PROGRESS" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1410" y="230" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
