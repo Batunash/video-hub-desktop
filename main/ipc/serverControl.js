@@ -1,28 +1,49 @@
 const { ipcMain } = require("electron");
-const { spawn, exec } = require("child_process");
-let serverProcess = null;
+const os =require('os');
+const serverManager = require("../../backend/index");
+let serverProcess = null
 
 module.exports = function registerServerControlIPC() {
   ipcMain.handle("server:start", async () => {
-    if (serverProcess) return { running: true, message: "Already running" };
-
-    serverProcess = spawn("node", ["backend/index.js"], {
-      cwd: process.cwd(),
-      detached: false,
-      stdio: "inherit",
-    });
-
-    return { running: true, message: "Server started" };
+    try {
+      await serverManager.start(); 
+      return { running: true, message: "Server started" };
+    } catch (err) {
+      console.error("Server Start Error:", err);
+      return { running: false, message: err.message };
+    }
   });
   ipcMain.handle("server:stop", async () => {
-    if (!serverProcess) return { running: false, message: "Not running" };
-
-    serverProcess.kill();
-    serverProcess = null;
-
-    return { running: false, message: "Server stopped" };
+    try {
+      await serverManager.stop();
+      return { running: false, message: "Server stopped" };
+    } catch (err) {
+      return { running: true, message: err.message };
+    }
   });
   ipcMain.handle("server:status", async () => {
-    return { running: serverProcess !== null };
+    const running = serverManager.isRunning();
+    return { running };
   });
+  ipcMain.handle("server:getNetworkInfo", async () => {
+        try {
+            const nets = os.networkInterfaces();
+            const results = {};
+
+            for (const name of Object.keys(nets)) {
+                for (const net of nets[name]) {
+                    if (net.family === 'IPv4' && !net.internal) {
+                        if (!results[name]) results[name] = [];
+                        results[name].push(net.address);
+                    }
+                }
+            }
+            const firstKey = Object.keys(results)[0];
+            const ip = firstKey ? results[firstKey][0] : "127.0.0.1";
+            return { ip };
+        } catch (e) {
+            console.error("IP Bulma Hatası:", e);
+            return { ip: "127.0.0.1" };
+        }
+    });
 };

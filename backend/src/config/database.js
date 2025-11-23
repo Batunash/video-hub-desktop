@@ -1,221 +1,138 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
-class database {
-  constructor(dbPath = null) {
-     
-    if (!dbPath) {
-      dbPath = path.join(__dirname, '../../database.db');
+
+class DatabaseManager {
+  constructor() {
+    const dbPath = path.join(__dirname, '../../../../video-hub.db');
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
     }
-    
+
     this.db = new Database(dbPath);
     this.initializeTables();
   }
 
   initializeTables() {
-
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS SERIES (
-        SERIE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        SERIE_NAME TEXT NOT NULL UNIQUE,
-        SERIE_PATH TEXT NOT NULL,
-        CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS EPISODES (
-        EPISODE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        SERIE_ID INTEGER NOT NULL,
-        EPISODE_NUMBER INTEGER NOT NULL,
-        EPISODE_NAME TEXT NOT NULL,
-        FILE_PATH TEXT NOT NULL,
-        FILE_SIZE INTEGER,
-        DURATION INTEGER,
-        CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (SERIE_ID) REFERENCES SERIES(SERIE_ID) ON DELETE CASCADE,
-        UNIQUE(SERIE_ID, EPISODE_NUMBER)
-      )
-    `);
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS USER (
-        USER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        USER_NAME TEXT NOT NULL UNIQUE,
-        USER_PASSWORD TEXT NOT NULL,
-        CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS USER_EPISODE (
-        USER_ID INTEGER NOT NULL,
-        EPISODE_ID INTEGER NOT NULL,
-        WATCHED_AT DATETIME DEFAULT CURRENT_TIMESTAMP,
-        PROGRESS REAL DEFAULT 0.0 CHECK (PROGRESS >= 0 AND PROGRESS <= 1),
-        WATCH_TIME INTEGER DEFAULT 0,
-        PRIMARY KEY (USER_ID, EPISODE_ID),
-        FOREIGN KEY (USER_ID) REFERENCES USER(USER_ID) ON DELETE CASCADE,
-        FOREIGN KEY (EPISODE_ID) REFERENCES EPISODES(EPISODE_ID) ON DELETE CASCADE
-      )
-    `);
-    this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_episodes_serie_id ON EPISODES(SERIE_ID);
-      CREATE INDEX IF NOT EXISTS idx_user_episode_user_id ON USER_EPISODE(USER_ID);
-      CREATE INDEX IF NOT EXISTS idx_user_episode_episode_id ON USER_EPISODE(EPISODE_ID);
+      CREATE TABLE IF NOT EXISTS USERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USERNAME TEXT UNIQUE, PASSWORD TEXT, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS SERIES (ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE TEXT, FOLDER_PATH TEXT UNIQUE, POSTER_PATH TEXT, BACKDROP_PATH TEXT, OVERVIEW TEXT, RATING TEXT, TMDB_ID INTEGER, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS SEASONS (ID INTEGER PRIMARY KEY AUTOINCREMENT, SERIE_ID INTEGER NOT NULL, SEASON_NUMBER INTEGER NOT NULL, NAME TEXT, FOLDER_PATH TEXT, FOREIGN KEY(SERIE_ID) REFERENCES SERIES(ID) ON DELETE CASCADE, UNIQUE(SERIE_ID, SEASON_NUMBER));
+      CREATE TABLE IF NOT EXISTS EPISODES (ID INTEGER PRIMARY KEY AUTOINCREMENT, SEASON_ID INTEGER NOT NULL, EPISODE_NUMBER INTEGER NOT NULL, NAME TEXT NOT NULL, FILE_PATH TEXT NOT NULL, FILE_SIZE INTEGER, DURATION INTEGER, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(SEASON_ID) REFERENCES SEASONS(ID) ON DELETE CASCADE);
+      CREATE TABLE IF NOT EXISTS WATCH_HISTORY (USER_ID INTEGER NOT NULL, EPISODE_ID INTEGER NOT NULL, PROGRESS REAL DEFAULT 0, WATCH_TIME INTEGER DEFAULT 0, WATCHED_AT DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(USER_ID, EPISODE_ID));
     `);
   }
-
-  // SERIES TABLE OPERATIONS
-  addSeries(serieName, seriePath) {
-    const stmt = this.db.prepare('INSERT INTO SERIES (SERIE_NAME, SERIE_PATH) VALUES (?, ?)');
-    return stmt.run(serieName, seriePath);
+    getUserByUsername(username) {
+    return this.db.prepare('SELECT * FROM USERS WHERE USERNAME = ?').get(username);
+  }
+  
+  getUserById(id) { 
+    return this.db.prepare('SELECT * FROM USERS WHERE ID = ?').get(id);
   }
 
+  createUser(username, password) {
+    return this.db.prepare('INSERT INTO USERS (USERNAME, PASSWORD) VALUES (?, ?)').run(username, password);
+  }
   getAllSeries() {
-    const stmt = this.db.prepare(`
-      SELECT s.*, COUNT(e.EPISODE_ID) as episode_count
-      FROM SERIES s
-      LEFT JOIN EPISODES e ON s.SERIE_ID = e.SERIE_ID
-      GROUP BY s.SERIE_ID, s.SERIE_NAME, s.SERIE_PATH
-      ORDER BY s.SERIE_NAME
-    `);
-    return stmt.all();
-  }
-
-  getSeriesById(serieId) {
-    const stmt = this.db.prepare('SELECT * FROM SERIES WHERE SERIE_ID = ?');
-    return stmt.get(serieId);
-  }
-
-  getSeriesByName(serieName) {
-    const stmt = this.db.prepare('SELECT * FROM SERIES WHERE SERIE_NAME = ?');
-    return stmt.get(serieName);
-  }
-
-  // EPISODES TABLES OPERATION
-  addEpisode(serieId, episodeNumber, episodeName, filePath, fileSize = null) {
-    const stmt = this.db.prepare(`
-      INSERT INTO EPISODES (SERIE_ID, EPISODE_NUMBER, EPISODE_NAME, FILE_PATH, FILE_SIZE) 
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    return stmt.run(serieId, episodeNumber, episodeName, filePath, fileSize);
-  }
-
-  getEpisodesBySeries(serieId) {
-    const stmt = this.db.prepare(`
-      SELECT e.*, s.SERIE_NAME, s.SERIE_PATH 
-      FROM EPISODES e 
-      JOIN SERIES s ON e.SERIE_ID = s.SERIE_ID 
-      WHERE e.SERIE_ID = ? 
-      ORDER BY e.EPISODE_NUMBER
-    `);
-    return stmt.all(serieId);
-  }
-
-  getEpisodeBySeriesAndFile(seriesName, fileName) {
-    const stmt = this.db.prepare(`
-      SELECT e.*, s.SERIE_NAME, s.SERIE_PATH 
-      FROM EPISODES e 
-      JOIN SERIES s ON e.SERIE_ID = s.SERIE_ID 
-      WHERE s.SERIE_NAME = ? AND e.EPISODE_NAME = ?
-    `);
-    return stmt.get(seriesName, fileName);
-  }
-
-  // USER TABLE OPERATIONS
-  addUser(userName, password) {
-    const stmt = this.db.prepare('INSERT INTO USER (USER_NAME, USER_PASSWORD) VALUES (?, ?)');
-    return stmt.run(userName, password);
-  }
-
-  getUserById(userId) {
-    const stmt = this.db.prepare('SELECT USER_ID, USER_NAME FROM USER WHERE USER_ID = ?');
-    return stmt.get(userId);
-  }
-  getUserByUsername(userName){
-    const stmt = this.db.prepare('SELECT * FROM USER WHERE USER_NAME = ?');
-    return stmt.get(userName);
-  }
-
-  // USER_EPISODE TABLE OPERATIONS
-  updateWatchProgress(userId, episodeId, progress, watchTime = 0) {
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO USER_EPISODE (USER_ID, EPISODE_ID, WATCHED_AT, PROGRESS, WATCH_TIME) 
-      VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)
-    `);
-    return stmt.run(userId, episodeId, progress, watchTime);
-  }
-
-  getUserEpisodeProgress(userId, episodeId) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM USER_EPISODE 
-      WHERE USER_ID = ? AND EPISODE_ID = ?
-    `);
-    return stmt.get(userId, episodeId);
+    return this.db.prepare('SELECT * FROM SERIES ORDER BY TITLE').all();
   }
 
   getSeriesWithUserProgress(userId) {
-    const stmt = this.db.prepare(`
-      SELECT 
-        s.*,
-        COUNT(e.EPISODE_ID) as total_episodes,
-        COUNT(ue.EPISODE_ID) as watched_episodes,
-        ROUND(COALESCE(COUNT(ue.EPISODE_ID) * 100.0 / COUNT(e.EPISODE_ID), 0), 2) as completion_percentage
-      FROM SERIES s
-      LEFT JOIN EPISODES e ON s.SERIE_ID = e.SERIE_ID
-      LEFT JOIN USER_EPISODE ue ON e.EPISODE_ID = ue.EPISODE_ID AND ue.USER_ID = ?
-      GROUP BY s.SERIE_ID
-      ORDER BY s.SERIE_NAME
-    `);
-    return stmt.all(userId);
+    return this.getAllSeries();
+  }
+  getEpisodesBySeries(serieId) {
+    const seasons = this.db.prepare('SELECT * FROM SEASONS WHERE SERIE_ID = ? ORDER BY SEASON_NUMBER').all(serieId);
+    let allEpisodes = [];
+    
+    for (const season of seasons) {
+        const episodes = this.db.prepare('SELECT * FROM EPISODES WHERE SEASON_ID = ? ORDER BY EPISODE_NUMBER').all(season.ID);
+        const episodesWithMeta = episodes.map(ep => ({
+            ...ep,
+            SEASON_NUMBER: season.SEASON_NUMBER,
+            SERIE_ID: serieId,
+            SERIE_NAME: this.db.prepare('SELECT TITLE FROM SERIES WHERE ID = ?').get(serieId).TITLE,
+            EPISODE_NAME: ep.NAME,
+            EPISODE_NUMBER: ep.EPISODE_NUMBER,
+            EPISODE_ID: ep.ID
+        }));
+        allEpisodes = [...allEpisodes, ...episodesWithMeta];
+    }
+    return allEpisodes;
   }
 
-  // ARCHIVE SYNC OPERATIONS
+  getEpisodeById(id) {
+    return this.db.prepare('SELECT * FROM EPISODES WHERE ID = ?').get(id);
+  }
+
+  getUserEpisodeProgress(userId, episodeId) {
+    return this.db.prepare('SELECT * FROM WATCH_HISTORY WHERE USER_ID = ? AND EPISODE_ID = ?').get(userId, episodeId);
+  }
+
+  updateWatchProgress(userId, episodeId, progress, watchTime) {
+      return this.db.prepare(`
+        INSERT INTO WATCH_HISTORY (USER_ID, EPISODE_ID, PROGRESS, WATCH_TIME, WATCHED_AT)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(USER_ID, EPISODE_ID) DO UPDATE SET
+        PROGRESS = excluded.PROGRESS,
+        WATCH_TIME = excluded.WATCH_TIME,
+        WATCHED_AT = CURRENT_TIMESTAMP
+      `).run(userId, episodeId, progress, watchTime);
+  }
+  deleteSeriesByPath(p) { this.db.prepare('DELETE FROM SERIES WHERE FOLDER_PATH = ?').run(p); }
+  deleteSeasonByPath(p) { this.db.prepare('DELETE FROM SEASONS WHERE FOLDER_PATH = ?').run(p); }
+  deleteEpisodeByPath(p) { this.db.prepare('DELETE FROM EPISODES WHERE FILE_PATH = ?').run(p); }
+
   syncFilesystemToDatabase(mediaDir, videoExts) {
-    const transaction = this.db.transaction(() => {
-      const dirents = fs.readdirSync(mediaDir, { withFileTypes: true });
-      
-      dirents.filter(d => d.isDirectory()).forEach(d => {
-        const seriesPath = path.join(mediaDir, d.name);
-        
-        // Add or update series
-        let series = this.getSeriesByName(d.name);
-        if (!series) {
-          const result = this.addSeries(d.name, seriesPath);
-          series = { SERIE_ID: result.lastInsertRowid, SERIE_NAME: d.name, SERIE_PATH: seriesPath };
+    if (!fs.existsSync(mediaDir)) return;
+    const syncTransaction = this.db.transaction(() => {
+        const seriesFolders = fs.readdirSync(mediaDir, { withFileTypes: true }).filter(d => d.isDirectory());
+        for (const serieDir of seriesFolders) {
+            const seriePath = path.join(mediaDir, serieDir.name);
+            const metaPath = path.join(seriePath, 'metadata.json');
+            let title = serieDir.name, poster = null, backdrop = null, overview = null, rating = null, tmdbId = null;
+
+            if (fs.existsSync(metaPath)) {
+                try {
+                    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                    title = meta.title || serieDir.name;
+                    poster = meta.localPoster ? `/images/${encodeURIComponent(serieDir.name)}/${meta.localPoster}` : null;
+                    backdrop = meta.backdrop || null;
+                    overview = meta.overview || null;
+                    rating = meta.rating || null;
+                    tmdbId = meta.id || null;
+                } catch (e) {}
+            }
+
+            let serie = this.db.prepare('SELECT * FROM SERIES WHERE FOLDER_PATH = ?').get(seriePath);
+            if (!serie) {
+                const info = this.db.prepare('INSERT INTO SERIES (TITLE, FOLDER_PATH, POSTER_PATH, BACKDROP_PATH, OVERVIEW, RATING, TMDB_ID) VALUES (?, ?, ?, ?, ?, ?, ?)').run(title, seriePath, poster, backdrop, overview, rating, tmdbId);
+                serie = { ID: info.lastInsertRowid };
+            }
+
+            const seasonFolders = fs.readdirSync(seriePath, { withFileTypes: true }).filter(d => d.isDirectory() && d.name.startsWith('Season'));
+            for (const seasonDir of seasonFolders) {
+                const seasonPath = path.join(seriePath, seasonDir.name);
+                const seasonNum = parseInt(seasonDir.name.replace(/\D/g, '')) || 0;
+                let season = this.db.prepare('SELECT * FROM SEASONS WHERE SERIE_ID = ? AND SEASON_NUMBER = ?').get(serie.ID, seasonNum);
+                if (!season) {
+                    const info = this.db.prepare('INSERT INTO SEASONS (SERIE_ID, SEASON_NUMBER, NAME, FOLDER_PATH) VALUES (?, ?, ?, ?)').run(serie.ID, seasonNum, seasonDir.name, seasonPath);
+                    season = { ID: info.lastInsertRowid };
+                }
+                const files = fs.readdirSync(seasonPath).filter(f => videoExts.includes(path.extname(f).toLowerCase()));
+                files.forEach((file, index) => {
+                    const filePath = path.join(seasonPath, file);
+                    const stats = fs.statSync(filePath);
+                    const exists = this.db.prepare('SELECT ID FROM EPISODES WHERE SEASON_ID = ? AND FILE_PATH = ?').get(season.ID, filePath);
+                    if (!exists) {
+                        this.db.prepare('INSERT INTO EPISODES (SEASON_ID, EPISODE_NUMBER, NAME, FILE_PATH, FILE_SIZE) VALUES (?, ?, ?, ?, ?)').run(season.ID, index + 1, file, filePath, stats.size);
+                    }
+                });
+            }
         }
-
-        // Get video files in series directory
-        const files = fs.readdirSync(seriesPath, { withFileTypes: true })
-          .filter(f => f.isFile() && videoExts.includes(path.extname(f.name).toLowerCase()));
-
-        files.forEach((f, index) => {
-          const filePath = path.join(seriesPath, f.name);
-          const fileStats = fs.statSync(filePath);
-          
-          // Check if episode already exists
-          const existingEpisode = this.db.prepare(`
-            SELECT * FROM EPISODES 
-            WHERE SERIE_ID = ? AND EPISODE_NAME = ?
-          `).get(series.SERIE_ID, f.name);
-
-          if (!existingEpisode) {
-            this.addEpisode(
-              series.SERIE_ID,
-              index + 1, // Episode number based on file order
-              f.name,
-              filePath,
-              fileStats.size
-            );
-          }
-        });
-      });
     });
-
-    transaction();
-  }
-
-  close() {
-    this.db.close();
+    syncTransaction();
   }
 }
 
-module.exports = database;
+module.exports = new DatabaseManager();

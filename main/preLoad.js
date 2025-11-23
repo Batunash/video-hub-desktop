@@ -1,7 +1,10 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const validChannels = [
+  "auth:login",   
+  "auth:register", 
   "server:start",
   "server:stop",
+  "server:getNetworkInfo",
   "server:status",
   "file:createSerie",
   "file:getSeries",
@@ -10,9 +13,17 @@ const validChannels = [
   "file:addEpisode:progress", 
   "file:addEpisode:done",
   "file:getSeriesDetail", 
-  "file:getEpisodes",     
+  "file:getEpisodes",   
+  "file:deleteSerie",
+  "file:deleteSeason",
+  "file:deleteEpisode",  
+  "file:syncDatabase",
   "dialog:openVideoFiles",
   "dialog:openFileImage",
+  "dialog:openDirectory",
+  "settings:get",
+  "settings:save",
+  "app:restart"
 ];
 
 contextBridge.exposeInMainWorld("api", {

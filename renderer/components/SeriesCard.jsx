@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const SeriesCard = ({ data, onClick }) => {
+const SeriesCard = ({ data, onClick,onDelete}) => {
   const [isHovered, setIsHovered] = useState(false);
   const styles = getStyles(isHovered);
   let imageSource;
@@ -19,6 +19,18 @@ const SeriesCard = ({ data, onClick }) => {
       onClick={() => onClick && onClick(data.id)}
     >
       <img src={imageSource} alt={data.title} style={styles.image} />
+      {isHovered && onDelete && (
+        <button
+          style={styles.deleteBtn}
+          onClick={(e) => {
+            e.stopPropagation(); 
+            onDelete(data);      
+          }}
+          title="Diziyi Sil"
+        >
+          🗑️
+        </button>
+      )}
       
       <div style={styles.overlay}>
         <span style={styles.title}>{data.title}</span>
@@ -72,6 +84,23 @@ const getStyles = (isHovered) => ({
     borderRadius: '4px',
     fontSize: '0.8rem',
     fontWeight: '600',
-  }
+  },
+  deleteBtn: {
+    position: 'absolute',
+    top: '10px',
+    right: '10px',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    border: '1px solid #ef4444',
+    borderRadius: '50%',
+    width: '35px',
+    height: '35px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '1.2rem',
+    zIndex: 10,
+    transition: '0.2s'
+  },
 });
 export default SeriesCard;

@@ -11,12 +11,20 @@ const AddSeriesPage = () => {
   const [fetchedData, setFetchedData] = useState(null); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const [manualForm, setManualForm] = useState({
     title: '',
     image: '',
     rating: '',
     overview: ''
   });
+  useEffect(() => {
+    window.api.invoke('settings:get').then(cfg => {
+        const hasKey = cfg.VITE_TMDB_API_KEY && cfg.VITE_TMDB_API_KEY.length > 10;
+        setHasApiKey(hasKey);
+        if (!hasKey) setActiveTab('manual');
+    });
+  }, []);
   const handleFetch = async () => {
     const imdbId = extractImdbId(imdbLink);
     if (!imdbId) { setError("Geçerli link bulunamadı"); return; }
@@ -99,8 +107,10 @@ const AddSeriesPage = () => {
       <div style={styles.container}>
         <div style={styles.tabHeader}>
           <button 
+            disabled={!hasApiKey}
             style={activeTab === 'auto' ? styles.activeTab : styles.tab} 
-            onClick={() => { setActiveTab('auto'); setError(null); }}
+            onClick={() => { if(hasApiKey) { setActiveTab('auto'); setError(null); }}}
+            title={!hasApiKey ? "Ayarlardan API Key giriniz" : ""}
           >
             🔗 Link ile Getir
           </button>

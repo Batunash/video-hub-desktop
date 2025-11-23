@@ -5,6 +5,8 @@ const isDev = !app.isPackaged;
 const registerServerControlIPC = require("./ipc/serverControl");
 const registerFileControl = require("./ipc/fileControl");
 const registerDialogManager = require("./ipc/dialogManager");
+const registerAuthControl = require("./ipc/authControl");
+const registerSettingsControl = require("./ipc/settingsControl")
 
 let mainWindow;
 
@@ -34,6 +36,8 @@ function registerIpcHandlers() {
   registerServerControlIPC();
   registerFileControl();
   registerDialogManager();
+  registerAuthControl();
+  registerSettingsControl();
 }
 app.whenReady().then(() => {
   protocol.handle('media', (request) => {

@@ -4,15 +4,18 @@ const fs = require("fs");
 const { MEDIA_DIR } = require('../../config/config');
 const episodeQueue = require("../utils/episodeQueue");
 const { downloadImage} =require("../utils/imageDownloader");
-
+const db=require("../../backend/src/config/database");
 const eq = new episodeQueue(MEDIA_DIR);
-
-module.exports = function registerFileControl(){
+const {VIDEO_EXTS}=require("../../backend/src/constants");
+module.exports = function registerFileControl() {
     ipcMain.handle("file:createSerie", async (event, { serieName, metadata }) => {
-        if (!fs.existsSync(MEDIA_DIR)) return { success: false, message: "Archive directory not exists" };
+        if (!fs.existsSync(MEDIA_DIR)) return { success: false, message: "Arşiv klasörü bulunamadı." };
+        
         const safeName = serieName.replace(/[<>:"/\\|?*]+/g, '');
         const fullPath = path.join(MEDIA_DIR, safeName);
+
         if (fs.existsSync(fullPath)) return { success: false, message: "Bu dizi zaten var!", path: fullPath };
+
         try {
             fs.mkdirSync(fullPath, { recursive: true });
             let localImagePath = null;
@@ -21,12 +24,17 @@ module.exports = function registerFileControl(){
                 const imageFileName = `poster${imageExt}`;
                 const imageDest = path.join(fullPath, imageFileName);
 
-                if (metadata.image.startsWith('http')) {
-                    await downloadImage(metadata.image, imageDest);
-                } else {
-                    fs.copyFileSync(metadata.image, imageDest);
+                try {
+                    if (metadata.image.startsWith('http')) {
+                        await downloadImage(metadata.image, imageDest);
+                    } else if (fs.existsSync(metadata.image)) {
+                        fs.copyFileSync(metadata.image, imageDest);
+                    }
+                    
+                    if (fs.existsSync(imageDest)) localImagePath = imageFileName;
+                } catch (imgErr) {
+                    console.error("Resim işleme hatası:", imgErr);
                 }
-                localImagePath = imageFileName;
             }
             const jsonContent = {
                 ...metadata,
@@ -34,45 +42,53 @@ module.exports = function registerFileControl(){
                 localPoster: localImagePath,
                 createdAt: new Date().toISOString()
             };
-            fs.writeFileSync(
-                path.join(fullPath, 'metadata.json'), 
-                JSON.stringify(jsonContent, null, 2)
-            );
+            fs.writeFileSync(path.join(fullPath, 'metadata.json'), JSON.stringify(jsonContent, null, 2));
             if (metadata.numberOfSeasons > 0) {
                 for (let i = 1; i <= metadata.numberOfSeasons; i++) {
                     const seasonPath = path.join(fullPath, `Season ${i}`);
-                    if (!fs.existsSync(seasonPath)) {
-                        fs.mkdirSync(seasonPath);
-                    }
+                    if (!fs.existsSync(seasonPath)) fs.mkdirSync(seasonPath);
                 }
             }
-            return { success: true, message: "Dizi ve dosyalar başarıyla oluşturuldu", path: fullPath };
+            try {
+                db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
+            } catch (dbErr) {
+                console.error("DB Sync Hatası:", dbErr);
+            }
+
+            return { success: true, message: "Oluşturuldu", path: fullPath };
+
         } catch (err) {
             console.error("Kritik Hata:", err);
-            return { success: false, message: "Dizi oluşturulurken hata çıktı", error: err.message };
+            return { success: false, message: "Hata", error: err.message };
         }
     });
-  ipcMain.handle("file:createSeason",(event,data)=>{
-    if((!fs.existsSync(MEDIA_DIR)))return{isExist: false, message:"archive directroy is not exists"};
-    const fullPath = path.join(MEDIA_DIR, data.serieName, data.seasonId);
-    try {
+    ipcMain.handle("file:createSeason", (event, data) => {
+        if (!fs.existsSync(MEDIA_DIR)) return { isExist: false, message: "Arşiv yok" };
+        const fullPath = path.join(MEDIA_DIR, data.serieName, data.seasonId);
+        
+        try {
             fs.mkdirSync(fullPath, { recursive: true });
-            console.log("Klasör oluşturuldu:", fullPath);
-            return { isExist: true, message: "Folder created successfully", path: fullPath };
-    } catch (err) {
-            console.error("Hata:", err);
-            return { isExist: false, message: "Error creating folder", error: err.message };
-    }
-  });
-  ipcMain.handle("file:addEpisode", (event, data) => {
+            db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
+
+            return { isExist: true, message: "Oluşturuldu", path: fullPath };
+        } catch (err) {
+            return { isExist: false, message: "Hata", error: err.message };
+        }
+    });
+
+    ipcMain.handle("file:addEpisode", (event, data) => {
         const fullPath = path.join(MEDIA_DIR, data.serieName, data.seasonId);
         if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
+        
         eq.addVideos(
-        data.videos.map(f => ({...f,filePath:f.path,destFolder: fullPath,event}))
+            data.videos.map(f => ({ ...f, filePath: f.path, destFolder: fullPath, event }))
         );
+        setTimeout(() => {
+             db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
+        }, 3000);
 
-        return { ok: true, message: "Videos queued" };
-});
+        return { ok: true, message: "Kuyruğa eklendi" };
+    });
     ipcMain.handle("file:getSeries", async () => {
         if (!fs.existsSync(MEDIA_DIR)) return [];
         try {
@@ -94,7 +110,7 @@ module.exports = function registerFileControl(){
             }
             return seriesList;
         } catch (err) {
-            console.error("Diziler okunurken hata:", err);
+            console.error("Okuma hatası:", err);
             return [];
         }
     });
@@ -111,40 +127,74 @@ module.exports = function registerFileControl(){
                     metadata.fullPosterPath = path.join(seriePath, metadata.localPoster);
                 }
             }
+
             const items = fs.readdirSync(seriePath);
             const seasons = items
                 .filter(item => item.startsWith('Season') && fs.statSync(path.join(seriePath, item)).isDirectory())
                 .sort((a, b) => {
-                    const numA = parseInt(a.replace('Season ', '')) || 0;
-                    const numB = parseInt(b.replace('Season ', '')) || 0;
+                    const numA = parseInt(a.replace(/\D/g, '')) || 0;
+                    const numB = parseInt(b.replace(/\D/g, '')) || 0;
                     return numA - numB;
                 });
 
             return { ...metadata, seasons };
         } catch (err) {
-            console.error("Detay hatası:", err);
             return { error: err.message };
         }
     });
     ipcMain.handle("file:getEpisodes", async (event, { folderName, season }) => {
         const seasonPath = path.join(MEDIA_DIR, folderName, season);
         if (!fs.existsSync(seasonPath)) return [];
-
         try {
             const files = fs.readdirSync(seasonPath);
-            const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
-            const episodes = files
-                .filter(file => videoExtensions.includes(path.extname(file).toLowerCase()))
+            return files
+                .filter(file => VIDEO_EXTS.includes(path.extname(file).toLowerCase()))
                 .map(file => ({
                     name: file,
                     path: path.join(seasonPath, file),
                     size: fs.statSync(path.join(seasonPath, file)).size
                 }));
-            return episodes;
         } catch (err) {
-            console.error("Bölüm okuma hatası:", err);
             return [];
         }
     });
-
-}
+    ipcMain.handle("file:deleteSerie", async (event, folderName) => {
+        const targetPath = path.join(MEDIA_DIR, folderName);
+        if (!fs.existsSync(targetPath)) return { success: false, message: "Klasör yok" };
+        try {
+            fs.rmSync(targetPath, { recursive: true, force: true });
+            db.deleteSeriesByPath(targetPath);
+            
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    });
+    ipcMain.handle("file:deleteSeason", async (event, { folderName, season }) => {
+        const targetPath = path.join(MEDIA_DIR, folderName, season);
+        try {
+            fs.rmSync(targetPath, { recursive: true, force: true });
+            db.deleteSeasonByPath(targetPath);
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    });
+    ipcMain.handle("file:deleteEpisode", async (event, filePath) => {
+        try {
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            db.deleteEpisodeByPath(filePath);
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    });
+    ipcMain.handle("file:syncDatabase", async () => {
+        try {
+            db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
+            return { success: true, message: "Senkronizasyon tamamlandı." };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    });
+};

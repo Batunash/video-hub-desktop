@@ -27,4 +27,11 @@ module.exports = function registerDialogManager(){
             return filePaths[0];
         }
     });
+    ipcMain.handle("dialog:openDirectory", async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            title: 'Medya Klasörünü Seç',
+            properties: ['openDirectory'] 
+        });
+        return canceled ? null : filePaths[0];
+    });
 };

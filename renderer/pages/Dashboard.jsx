@@ -42,17 +42,24 @@ export default function Dashboard() {
       console.error("IPC Hatası (Start/Stop):", error);
     }
   };
-
-  
   const handleAddSerie = () => {
       navigate('/add-series');
   };
-
-
   const navigateToSettings = () => {
       navigate('/settings');
-  };
-
+  };const handleDeleteSerie = async (serie) => {
+    if (!confirm(`"${serie.title}" dizisini ve tüm dosyalarını silmek istediğine emin misin?`)) return;
+    try {
+        const res = await window.api.invoke('file:deleteSerie', serie.folderName);
+        if (res.success) {
+            setSeries(prev => prev.filter(s => s.folderName !== serie.folderName));
+        } else {
+            alert("Silinemedi: " + res.error);
+        }
+    } catch (err) {
+        console.error(err);
+    }
+};
   return (
     <div style={styles.page}>
       <div style={styles.mainContent}>
@@ -64,6 +71,7 @@ export default function Dashboard() {
                 key={serie.id} 
                 data={serie}
                 onClick={() => navigate(`/details/${encodeURIComponent(serie.folderName)}`)}
+                onDelete={handleDeleteSerie}
                 />
             ))}
             </div>

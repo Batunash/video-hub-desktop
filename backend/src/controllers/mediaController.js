@@ -1,6 +1,5 @@
 const mediaService = require('../services/mediaService');
 
-// /series endpointi
 async function listSeries(req, res) {
   try {
     const userId = req.user?.id; 

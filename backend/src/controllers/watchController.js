@@ -1,14 +1,12 @@
 const watchService = require('../services/watchService');
 const fs = require('fs');
-const path = require('path');
-
-async function startwatch(req, res) {
-    try{
-        const result =watchService.watch(req);
-        if(result.headers){
+async function startWatch(req, res) {
+    try {
+        const result = watchService.watch(req);        
+        if (result.headers) {
             res.status(206).set(result.headers);
             result.file.pipe(res);
-        } else{
+        } else {
             const mimeType = watchService.getMimeType(result.filePath);
             const headers = {
                 'Content-Type': mimeType,
@@ -18,9 +16,11 @@ async function startwatch(req, res) {
             res.status(200).set(headers);
             fs.createReadStream(result.filePath).pipe(res);
         }
-    }catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'WATCH_EPISODE_FAILED' });
+    } catch (e) {
+        console.error("Watch Error:", e.message);
+        if (!res.headersSent) {
+            res.status(404).json({ error: e.message });
+        }
     }
 }
 
@@ -29,11 +29,9 @@ async function updateProgress(req, res) {
     const { episodeId } = req.params;
     const { progress, watchTime } = req.body;
     const userId = req.user?.id;
-    
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
     watchService.updateProgress(userId, episodeId, progress, watchTime);
     res.json({ success: true });
   } catch (e) {
@@ -43,6 +41,6 @@ async function updateProgress(req, res) {
 }
 
 module.exports = {
-  startwatch,
+  startWatch,
   updateProgress
 };
