@@ -1,6 +1,6 @@
 import React from 'react';
 
-const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete }) => {
+const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete,isMovie}) => {
   return (
     <div style={styles.seasonSection}>
         <div style={styles.seasonList}>
@@ -17,11 +17,12 @@ const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete }) => {
                         style={styles.deleteSeasonBadge}
                         title="Sezonu Sil"
                     >
-                        ×
                     </span>
                 </div>
             ))}
-            <button style={styles.addSeasonBtn} onClick={onAdd}>+ Yeni Sezon</button>
+            {!isMovie && (
+                <button style={styles.addSeasonBtn} onClick={onAdd}>+ Yeni Sezon</button>
+            )}
         </div>
     </div>
   );

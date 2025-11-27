@@ -22,7 +22,7 @@ class DatabaseManager {
   initializeTables() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS USERS (ID INTEGER PRIMARY KEY AUTOINCREMENT, USERNAME TEXT UNIQUE, PASSWORD TEXT, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP);
-      CREATE TABLE IF NOT EXISTS SERIES (ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE TEXT, FOLDER_PATH TEXT UNIQUE, POSTER_PATH TEXT, BACKDROP_PATH TEXT, OVERVIEW TEXT, RATING TEXT, TMDB_ID INTEGER, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS SERIES (ID INTEGER PRIMARY KEY AUTOINCREMENT, TITLE TEXT, FOLDER_PATH TEXT UNIQUE, POSTER_PATH TEXT, BACKDROP_PATH TEXT, OVERVIEW TEXT, RATING TEXT, TMDB_ID INTEGER, TYPE TEXT DEFAULT 'serie',CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE IF NOT EXISTS SEASONS (ID INTEGER PRIMARY KEY AUTOINCREMENT, SERIE_ID INTEGER NOT NULL, SEASON_NUMBER INTEGER NOT NULL, NAME TEXT, FOLDER_PATH TEXT, FOREIGN KEY(SERIE_ID) REFERENCES SERIES(ID) ON DELETE CASCADE, UNIQUE(SERIE_ID, SEASON_NUMBER));
       CREATE TABLE IF NOT EXISTS EPISODES (ID INTEGER PRIMARY KEY AUTOINCREMENT, SEASON_ID INTEGER NOT NULL, EPISODE_NUMBER INTEGER NOT NULL, NAME TEXT NOT NULL, FILE_PATH TEXT NOT NULL, FILE_SIZE INTEGER, DURATION INTEGER, CREATED_AT DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(SEASON_ID) REFERENCES SEASONS(ID) ON DELETE CASCADE);
       CREATE TABLE IF NOT EXISTS WATCH_HISTORY (USER_ID INTEGER NOT NULL, EPISODE_ID INTEGER NOT NULL, PROGRESS REAL DEFAULT 0, WATCH_TIME INTEGER DEFAULT 0, WATCHED_AT DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(USER_ID, EPISODE_ID));
@@ -100,43 +100,77 @@ class DatabaseManager {
   deleteEpisodeByPath(p) { this.db.prepare('DELETE FROM EPISODES WHERE FILE_PATH = ?').run(p); }
   syncFilesystemToDatabase(mediaDir, videoExts) {
     if (!fs.existsSync(mediaDir)) return;
+
     const syncTransaction = this.db.transaction(() => {
         const seriesFolders = fs.readdirSync(mediaDir, { withFileTypes: true }).filter(d => d.isDirectory());
-        for (const serieDir of seriesFolders) {
-            const seriePath = path.join(mediaDir, serieDir.name);
-            const metaPath = path.join(seriePath, 'metadata.json');
-            let title = serieDir.name, poster = null, backdrop = null, overview = null, rating = null, tmdbId = null;
+
+        for (const dir of seriesFolders) {
+            const contentPath = path.join(mediaDir, dir.name);
+            const metaPath = path.join(contentPath, 'metadata.json');
+            
+            let title = dir.name;
+            let type = 'serie'; // Varsayılan Dizi
+            let poster = null, backdrop = null, overview = null, rating = null, tmdbId = null;
+
             if (fs.existsSync(metaPath)) {
                 try {
                     const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-                    title = meta.title || serieDir.name;
-                    poster = meta.localPoster ? `/images/${encodeURIComponent(serieDir.name)}/${meta.localPoster}` : null;
-                    backdrop = meta.backdrop || null; overview = meta.overview || null; rating = meta.rating || null; tmdbId = meta.id || null;
-                } catch (e) {}
+                    title = meta.title || dir.name;
+                    type = meta.type || 'serie';
+                    poster = meta.localPoster ? `/images/${encodeURIComponent(dir.name)}/${meta.localPoster}` : null;
+                    backdrop = meta.backdrop || null;
+                    overview = meta.overview || null;
+                    rating = meta.rating || null;
+                    tmdbId = meta.id || null;
+                } catch (e) { console.error("Meta okuma hatası:", e); }
             }
-            let serie = this.db.prepare('SELECT * FROM SERIES WHERE FOLDER_PATH = ?').get(seriePath);
+            let serie = this.db.prepare('SELECT * FROM SERIES WHERE FOLDER_PATH = ?').get(contentPath);
             if (!serie) {
-                const info = this.db.prepare('INSERT INTO SERIES (TITLE, FOLDER_PATH, POSTER_PATH, BACKDROP_PATH, OVERVIEW, RATING, TMDB_ID) VALUES (?, ?, ?, ?, ?, ?, ?)').run(title, seriePath, poster, backdrop, overview, rating, tmdbId);
+                const info = this.db.prepare(`
+                    INSERT INTO SERIES (TITLE, FOLDER_PATH, POSTER_PATH, BACKDROP_PATH, OVERVIEW, RATING, TMDB_ID, TYPE) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(title, contentPath, poster, backdrop, overview, rating, tmdbId, type);
                 serie = { ID: info.lastInsertRowid };
             }
-            const seasonFolders = fs.readdirSync(seriePath, { withFileTypes: true }).filter(d => d.isDirectory() && d.name.startsWith('Season'));
-            for (const seasonDir of seasonFolders) {
-                const seasonPath = path.join(seriePath, seasonDir.name);
-                const seasonNum = parseInt(seasonDir.name.replace(/\D/g, '')) || 0;
-                let season = this.db.prepare('SELECT * FROM SEASONS WHERE SERIE_ID = ? AND SEASON_NUMBER = ?').get(serie.ID, seasonNum);
+            if (type === 'movie') {
+                let season = this.db.prepare('SELECT * FROM SEASONS WHERE SERIE_ID = ? AND SEASON_NUMBER = 1').get(serie.ID);
                 if (!season) {
-                    const info = this.db.prepare('INSERT INTO SEASONS (SERIE_ID, SEASON_NUMBER, NAME, FOLDER_PATH) VALUES (?, ?, ?, ?)').run(serie.ID, seasonNum, seasonDir.name, seasonPath);
+                    const info = this.db.prepare('INSERT INTO SEASONS (SERIE_ID, SEASON_NUMBER, NAME, FOLDER_PATH) VALUES (?, ?, ?, ?)').run(serie.ID, 1, "Film", contentPath);
                     season = { ID: info.lastInsertRowid };
                 }
-                const files = fs.readdirSync(seasonPath).filter(f => videoExts.includes(path.extname(f).toLowerCase()));
-                files.forEach((file, index) => {
-                    const filePath = path.join(seasonPath, file);
-                    const stats = fs.statSync(filePath);
-                    const exists = this.db.prepare('SELECT ID FROM EPISODES WHERE SEASON_ID = ? AND FILE_PATH = ?').get(season.ID, filePath);
-                    if (!exists) {
-                        this.db.prepare('INSERT INTO EPISODES (SEASON_ID, EPISODE_NUMBER, NAME, FILE_PATH, FILE_SIZE) VALUES (?, ?, ?, ?, ?)').run(season.ID, index + 1, file, filePath, stats.size);
+                const files = fs.readdirSync(contentPath).filter(f => videoExts.includes(path.extname(f).toLowerCase()));
+                if (files.length > 0) {
+                     const file = files[0]; 
+                     const filePath = path.join(contentPath, file);
+                     const stats = fs.statSync(filePath);                     
+                     const exists = this.db.prepare('SELECT ID FROM EPISODES WHERE SEASON_ID = ? AND FILE_PATH = ?').get(season.ID, filePath);
+                     if (!exists) {
+                        this.db.prepare('INSERT INTO EPISODES (SEASON_ID, EPISODE_NUMBER, NAME, FILE_PATH, FILE_SIZE) VALUES (?, ?, ?, ?, ?)').run(season.ID, 1, title, filePath, stats.size);
+                     }
+                }
+
+            } else {
+                const seasonFolders = fs.readdirSync(contentPath, { withFileTypes: true }).filter(d => d.isDirectory() && d.name.startsWith('Season'));                
+                for (const seasonDir of seasonFolders) {
+                    const seasonPath = path.join(contentPath, seasonDir.name);
+                    const seasonNum = parseInt(seasonDir.name.replace(/\D/g, '')) || 0;
+
+                    let season = this.db.prepare('SELECT * FROM SEASONS WHERE SERIE_ID = ? AND SEASON_NUMBER = ?').get(serie.ID, seasonNum);
+                    if (!season) {
+                        const info = this.db.prepare('INSERT INTO SEASONS (SERIE_ID, SEASON_NUMBER, NAME, FOLDER_PATH) VALUES (?, ?, ?, ?)').run(serie.ID, seasonNum, seasonDir.name, seasonPath);
+                        season = { ID: info.lastInsertRowid };
                     }
-                });
+                    const files = fs.readdirSync(seasonPath).filter(f => videoExts.includes(path.extname(f).toLowerCase()));
+                    files.forEach((file, index) => {
+                        const filePath = path.join(seasonPath, file);
+                        const stats = fs.statSync(filePath);
+                        
+                        const exists = this.db.prepare('SELECT ID FROM EPISODES WHERE SEASON_ID = ? AND FILE_PATH = ?').get(season.ID, filePath);
+                        if (!exists) {
+                            this.db.prepare('INSERT INTO EPISODES (SEASON_ID, EPISODE_NUMBER, NAME, FILE_PATH, FILE_SIZE) VALUES (?, ?, ?, ?, ?)').run(season.ID, index + 1, file, filePath, stats.size);
+                        }
+                    });
+                }
             }
         }
     });

@@ -6,6 +6,7 @@ import { extractImdbId } from '../utils/formatters';
 
 const AddSeriesPage = () => {
   const navigate = useNavigate();
+  const [contentType, setContentType] = useState('serie');
   const [activeTab, setActiveTab] = useState('auto'); 
   const [imdbLink, setImdbLink] = useState('');
   const [fetchedData, setFetchedData] = useState(null); 
@@ -35,24 +36,31 @@ const AddSeriesPage = () => {
     setLoading(true); setError(null);
     try {
       const data = await fetchSeriesByImdb(imdbId);
-      if (data) setFetchedData(data);
+      if (data) {
+        setFetchedData(data);
+        setContentType(data.type === 'movie' ? 'movie' : 'serie'); 
+      }
       else setError("Veri bulunamadı");
     } catch (e) { setError("Bağlantı hatası"); } 
     finally { setLoading(false); }
-  };
+};
   const saveAuto = async () => {
     if (!fetchedData) return;
+
     const finalMetadata = {
         ...fetchedData,
         id: Date.now(),
+        type: contentType, 
+        numberOfSeasons: contentType === 'movie' ? 1 : (fetchedData?.numberOfSeasons || 0),
     };
     try {
         const res = await window.api.invoke("file:createSerie", {
             serieName: finalMetadata.title,
             metadata: finalMetadata         
         });
+        
         if (res.success) {
-            alert(`"${finalMetadata.title}" kütüphaneye eklendi!\n${finalMetadata.numberOfSeasons} sezon klasörü oluşturuldu.`);
+            alert(`${contentType === 'movie' ? 'Film' : 'Dizi'} başarıyla eklendi!`);
             navigate('/');
         } else {
             alert("Hata: " + res.message);
@@ -65,8 +73,7 @@ const AddSeriesPage = () => {
   const handleManualChange = (field, value) => {
     setManualForm(prev => ({ ...prev, [field]: value }));
   };
-
-  const saveManual = async () => {
+ const saveManual = async () => {
     if (!manualForm.title || !manualForm.image) {
       alert("İsim ve Resim zorunludur!");
       return;
@@ -78,7 +85,8 @@ const AddSeriesPage = () => {
       rating: manualForm.rating || "0.0",
       overview: manualForm.overview || "Açıklama yok.",
       imdb_id: null,
-      numberOfSeasons: 1
+      numberOfSeasons: contentType === 'movie' ? 1 : 0, 
+      type: contentType 
     };
 
     try {
@@ -88,7 +96,7 @@ const AddSeriesPage = () => {
       });
 
       if (res.success) {
-         alert("Dizi başarıyla oluşturuldu!");
+         alert("Başarıyla oluşturuldu!");
          navigate('/'); 
       } else {
          alert("Hata: " + res.message);
@@ -166,7 +174,35 @@ const AddSeriesPage = () => {
           {activeTab === 'manual' && (
             <div style={{animation: 'fadeIn 0.3s'}}>
               <h3 style={styles.subTitle}>Dizi Bilgilerini Giriniz</h3>
-              
+              <div style={{ marginBottom: '20px' }}>
+                  <label style={{ 
+                      display: 'block',       
+                      color: '#fff',          
+                      marginBottom: '10px',    
+                      fontSize: '1.2rem',     
+                      fontWeight: 'bold'      
+                  }}>
+                    İçerik Türü
+                  </label>
+                  <select 
+                      value={contentType} 
+                      onChange={(e) => setContentType(e.target.value)}
+                      style={{
+                          width: '100%',      
+                          padding: '12px',    
+                          borderRadius: '8px',
+                          border: '1px solid #444',
+                          backgroundColor: '#222',
+                          color: 'white',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          cursor: 'pointer'
+                      }}
+                  >
+                      <option value="serie">📺 Dizi (TV Series)</option>
+                      <option value="movie">🎬 Film (Movie)</option>
+                  </select>
+              </div>
               <FormInput 
                 label="Dizi Adı *" 
                 value={manualForm.title} 

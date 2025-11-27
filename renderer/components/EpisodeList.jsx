@@ -1,11 +1,13 @@
 import React from 'react';
 
-const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete }) => {
+const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete,uploadDisabled }) => {
   return (
     <div style={styles.episodeSection}>
         <div style={styles.header}>
             <h3 style={{color: 'white', margin:0}}>{activeSeason} Bölümleri</h3>
-            <button style={styles.uploadBtn} onClick={onUpload}>☁️ Bölüm Yükle</button>
+            {!uploadDisabled && (
+                <button style={styles.uploadBtn} onClick={onUpload}>☁️ Dosya Yükle</button>
+            )}
         </div>
 
         {episodes.length > 0 ? (

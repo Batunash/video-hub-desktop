@@ -117,6 +117,7 @@ const SeriesDetail = () => {
             onSelect={setActiveSeason} 
             onAdd={handleAddSeason}
             onDelete={handleDeleteSeason}
+            isMovie={metadata?.type === 'movie'}
         />
         <TransferList transfers={transfers} />
         <EpisodeList 
@@ -124,6 +125,7 @@ const SeriesDetail = () => {
             activeSeason={activeSeason} 
             onUpload={handleUploadEpisode}
             onDelete={handleDeleteEpisode}
+            uploadDisabled={metadata?.type === 'movie' && episodes.length >= 1}
         />
 
       </div>
