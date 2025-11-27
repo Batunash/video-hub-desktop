@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete,isMovie}) => {
+const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete, isMovie }) => {
+  const { t } = useTranslation();
+
   return (
     <div style={styles.seasonSection}>
         <div style={styles.seasonList}>
@@ -15,13 +18,13 @@ const SeasonList = ({ seasons, activeSeason, onSelect, onAdd, onDelete,isMovie})
                     <span 
                         onClick={(e) => { e.stopPropagation(); onDelete(season); }}
                         style={styles.deleteSeasonBadge}
-                        title="Sezonu Sil"
+                        title={t('common.delete')}
                     >
                     </span>
                 </div>
             ))}
             {!isMovie && (
-                <button style={styles.addSeasonBtn} onClick={onAdd}>+ Yeni Sezon</button>
+                <button style={styles.addSeasonBtn} onClick={onAdd}>{t('detail.new_season')}</button>
             )}
         </div>
     </div>

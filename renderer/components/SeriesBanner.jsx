@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const SeriesBanner = ({ metadata, seasonCount, onBack }) => {
+  const { t } = useTranslation();
   const backdropUrl = metadata?.backdrop 
     ? (metadata.backdrop.startsWith('http') ? metadata.backdrop : `media://${metadata.fullPosterPath}`) 
     : `media://${metadata?.fullPosterPath}`;
@@ -11,11 +13,11 @@ const SeriesBanner = ({ metadata, seasonCount, onBack }) => {
       <div style={styles.bannerOverlay}></div>
       
       <div style={styles.headerContent}>
-          <button onClick={onBack} style={styles.backBtn}>&larr; Geri</button>
+          <button onClick={onBack} style={styles.backBtn}>&larr; {t('common.back')}</button>
           <h1 style={styles.title}>{metadata?.title}</h1>
           <div style={styles.metaBadges}>
               <span style={styles.badge}>IMDB: {metadata?.rating}</span>
-              <span style={styles.badge}>{seasonCount} Sezon</span>
+              <span style={styles.badge}>{seasonCount} {t('detail.seasons')}</span>
           </div>
           <p style={styles.overview}>{metadata?.overview}</p>
       </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslation } from 'react-i18next';
 
 const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [config, setConfig] = useState({
     PORT: '3000',
@@ -26,8 +28,7 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
             }));
             console.log("IP Adresi isteniyor..."); 
             const netInfo = await window.api.invoke('server:getNetworkInfo');
-            console.log("Gelen IP:", netInfo);
-
+            
             setNetworkInfo({ 
                 ip: netInfo && netInfo.ip ? netInfo.ip : '127.0.0.1',
                 port: settings.PORT || '3000' 
@@ -45,6 +46,10 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
     setConfig(prev => ({ ...prev, [key]: value }));
   };
 
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
+
   const handleSelectDir = async () => {
     const path = await window.api.invoke('dialog:openDirectory');
     if (path) handleChange('MEDIA_DIR', path);
@@ -52,7 +57,7 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
 
   const handleSave = async () => {
     if (!config.MEDIA_DIR) {
-        alert("Lütfen Medya Klasörünü seçin!");
+        alert(t('settings.dir_warning'));
         return;
     }
     setLoading(true);
@@ -61,28 +66,28 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
     if (res.success) {
         if (onConfigUpdate) onConfigUpdate(config);
         if (isSetupRequired) {
-            alert("Kurulum tamamlandı! Uygulama yeniden başlatılıyor...");
+            alert(t('settings.restarting'));
             await window.api.invoke('app:restart');
         } else {
-            if (confirm("Ayarlar kaydedildi. Uygulama yeniden başlatılsın mı?")) {
+            if (confirm(t('settings.restart_confirm'))) {
                 await window.api.invoke('app:restart');
             }
         }
     } else {
-        alert("Hata: " + res.error);
+        alert(t('common.error') + ": " + res.error);
     }
     setLoading(false);
   };
 
   const handleLogout = () => {
-    if(confirm("Çıkış yapmak istediğine emin misin?")) {
+    if(confirm(t('settings.logout_confirm'))) {
         localStorage.removeItem('user');
         window.location.reload(); 
     }
   };
 
   const handleSync = async () => {
-      alert("Otomatik senkronizasyon başlatıldı."); 
+      alert(t('common.processing')); 
       await window.api.invoke('file:syncDatabase');
   };
 
@@ -96,16 +101,21 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
       <div style={styles.container}>
         <div style={styles.header}>
             {!isSetupRequired && (
-                <button onClick={() => navigate('/')} style={styles.backBtn}>&larr; Geri</button>
+                <button onClick={() => navigate('/')} style={styles.backBtn}>&larr; {t('common.back')}</button>
             )}
-            <h1 style={{margin:0}}>Ayarlar</h1>
+            <h1 style={{margin:0}}>{t('settings.title')}</h1>
+            
+            <div style={{marginLeft: 'auto', display: 'flex', gap: '10px'}}>
+                <button onClick={() => changeLanguage('tr')} style={{...styles.langBtn, opacity: i18n.language === 'tr' ? 1 : 0.5}}>TR</button>
+                <button onClick={() => changeLanguage('en')} style={{...styles.langBtn, opacity: i18n.language === 'en' ? 1 : 0.5}}>EN</button>
+            </div>
         </div>
 
         <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>Sunucu & Medya</h3>
+            <h3 style={styles.sectionTitle}>{t('settings.section_server')}</h3>
             
             <div style={styles.inputGroup}>
-                <label style={styles.label}>Sunucu Portu</label>
+                <label style={styles.label}>{t('settings.port')}</label>
                 <input 
                     style={styles.input} 
                     value={config.PORT} 
@@ -114,34 +124,34 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
             </div>
 
             <div style={styles.inputGroup}>
-                <label style={styles.label}>Medya Klasörü</label>
+                <label style={styles.label}>{t('settings.media_dir')}</label>
                 <div style={{display:'flex', gap:'10px'}}>
                     <input 
                         style={{...styles.input, flex:1, color: '#aaa'}} 
                         value={config.MEDIA_DIR} 
                         readOnly 
                     />
-                    <button style={styles.browseBtn} onClick={handleSelectDir}>Seç</button>
+                    <button style={styles.browseBtn} onClick={handleSelectDir}>{t('settings.select_btn')}</button>
                 </div>
             </div>
             <div style={styles.inputGroup}>
-                <label style={styles.label}>TMDB API Anahtarı (Opsiyonel)</label>
+                <label style={styles.label}>{t('settings.api_key')} ({t('common.optional')})</label>
                 <input 
                     style={styles.input} 
                     value={config.TMDB_API_KEY || ''} 
                     onChange={(e) => handleChange('TMDB_API_KEY', e.target.value)}
-                    placeholder="API Key giriniz..."
+                    placeholder="API Key..."
                 />
                 <span style={styles.hint}>
-                    Otomatik kapak ve bilgi çekmek için gereklidir.
+                    {t('settings.api_key_help')}
                 </span>
             </div>
         </div>
 
         <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>Güvenlik</h3>
+            <h3 style={styles.sectionTitle}>{t('settings.section_security')}</h3>
             <div style={styles.inputGroup}>
-                <label style={styles.label}>JWT Secret</label>
+                <label style={styles.label}>{t('settings.jwt_secret')}</label>
                 <input 
                     type="password"
                     style={styles.input} 
@@ -152,17 +162,17 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
         </div>
 
         <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>📱 Mobil Bağlantı</h3>
+            <h3 style={styles.sectionTitle}>📱 {t('settings.section_mobile')}</h3>
             <div style={{display: 'flex', gap: '30px', alignItems: 'center'}}>
                 <div style={{background: 'white', padding: '10px', borderRadius: '8px'}}>
                     <QRCodeSVG value={qrData} size={150} />
                 </div>
                 <div>
                     <p style={{marginBottom: '10px', color: '#ccc'}}>
-                        Mobil uygulamadan bu kodu taratın.
+                        {t('settings.mobile_scan_hint')}
                     </p>
                     <div style={styles.connectionBox}>
-                        <span style={{color: '#888'}}>Adres:</span>
+                        <span style={{color: '#888'}}>{t('settings.address')}:</span>
                         <div style={{fontSize: '1.2rem', fontWeight: 'bold', color: '#4ade80', marginTop: '5px'}}>
                             http://{networkInfo.ip}:{networkInfo.port}
                         </div>
@@ -172,16 +182,16 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
         </div>
 
         <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>İşlemler</h3>
+            <h3 style={styles.sectionTitle}>{t('settings.section_actions')}</h3>
             <div style={{display:'flex', gap:'15px'}}>
-                <button style={styles.actionBtn} onClick={handleSync}>🔄 DB Senkronize Et</button>
-                <button style={{...styles.actionBtn, backgroundColor: '#ef4444', border:'none', color:'white'}} onClick={handleLogout}>🚪 Çıkış Yap</button>
+                <button style={styles.actionBtn} onClick={handleSync}>🔄 {t('settings.sync_db')}</button>
+                <button style={{...styles.actionBtn, backgroundColor: '#ef4444', border:'none', color:'white'}} onClick={handleLogout}>🚪 {t('settings.logout')}</button>
             </div>
         </div>
 
         <div style={styles.footer}>
             <button style={styles.saveBtn} onClick={handleSave} disabled={loading}>
-                {loading ? 'Yeniden Başlatılıyor...' : 'Kaydet ve Yeniden Başlat'}
+                {loading ? t('settings.restarting') : t('settings.save_restart')}
             </button>
         </div>
 
@@ -205,7 +215,8 @@ const styles = {
   actionBtn: { padding: '12px 20px', backgroundColor: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
   footer: { display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '50px' },
   saveBtn: { padding: '15px 40px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' },
-  connectionBox: {backgroundColor: '#222',padding: '15px',borderRadius: '8px',border: '1px dashed #444',marginTop: '10px'  },  
+  connectionBox: {backgroundColor: '#222',padding: '15px',borderRadius: '8px',border: '1px dashed #444',marginTop: '10px'  },
+  langBtn: { padding: '5px 10px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
 };
 
 export default SettingsPage;

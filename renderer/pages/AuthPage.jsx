@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const AuthPage = ({ onLoginSuccess }) => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ 
     username: '', 
@@ -8,6 +10,7 @@ const AuthPage = ({ onLoginSuccess }) => {
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     setFormData({ username: '', password: '' });
     setError(null);
@@ -23,7 +26,7 @@ const AuthPage = ({ onLoginSuccess }) => {
     setError(null);
 
     if (!formData.username || !formData.password) {
-        setError("Lütfen tüm alanları doldurun.");
+        setError(t('auth.fill_all'));
         return;
     }
 
@@ -32,7 +35,7 @@ const AuthPage = ({ onLoginSuccess }) => {
     try {
         const channel = isLogin ? "auth:login" : "auth:register";        
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Sunucu yanıt vermedi")), 5000)
+            setTimeout(() => reject(new Error(t('auth.server_timeout'))), 5000)
         );
         const responsePromise = window.api.invoke(channel, formData);        
         const res = await Promise.race([responsePromise, timeoutPromise]);
@@ -49,7 +52,7 @@ const AuthPage = ({ onLoginSuccess }) => {
         }
     } catch (err) {
         console.error(err);
-        setError(err.message || "Beklenmedik bir hata oluştu.");
+        setError(err.message || t('auth.unexpected_error'));
     } finally {
         setLoading(false); 
     }
@@ -58,15 +61,15 @@ const AuthPage = ({ onLoginSuccess }) => {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>{isLogin ? 'Hoşgeldiniz' : 'Hesap Oluştur'}</h2>
-        <p style={styles.subtitle}>Video Hub Yönetim Paneli</p>
+        <h2 style={styles.title}>{isLogin ? t('auth.welcome') : t('auth.create_account')}</h2>
+        <p style={styles.subtitle}>{t('auth.subtitle')}</p>
 
         <form onSubmit={handleSubmit}>
             <div style={{marginBottom: '15px'}}>
                 <input 
                     type="text" 
                     name="username"
-                    placeholder="Kullanıcı Adı" 
+                    placeholder={t('auth.username')} 
                     value={formData.username}
                     onChange={handleChange}
                     style={styles.input}
@@ -78,7 +81,7 @@ const AuthPage = ({ onLoginSuccess }) => {
                 <input 
                     type="password" 
                     name="password"
-                    placeholder="Şifre" 
+                    placeholder={t('auth.password')} 
                     value={formData.password}
                     onChange={handleChange}
                     style={styles.input}
@@ -93,17 +96,17 @@ const AuthPage = ({ onLoginSuccess }) => {
                 style={{...styles.button, opacity: loading ? 0.7 : 1, cursor: loading ? 'wait' : 'pointer'}} 
                 disabled={loading} 
             >
-                {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+                {loading ? t('common.processing') : (isLogin ? t('auth.login_btn') : t('auth.register_btn'))}
             </button>
         </form>
 
         <div style={styles.footer}>
-            {isLogin ? "Hesabın yok mu? " : "Zaten hesabın var mı? "}
+            {isLogin ? t('auth.no_account') + " " : t('auth.has_account') + " "}
             <span 
                 style={styles.link} 
                 onClick={() => setIsLogin(!isLogin)}
             >
-                {isLogin ? "Kayıt Ol" : "Giriş Yap"}
+                {isLogin ? t('auth.register_btn') : t('auth.login_btn')}
             </span>
         </div>
       </div>

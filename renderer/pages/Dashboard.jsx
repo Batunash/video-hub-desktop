@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import SeriesCard from '../components/SeriesCard';
 import ControlPanel from '../components/ControlPanel';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate(); 
   const [isServerRunning, setIsServerRunning] = useState(false);
   const [series, setSeries] = useState([]); 
+
   const loadSeries = async () => {
     try {
       const data = await window.api.invoke('file:getSeries');
@@ -42,28 +45,33 @@ export default function Dashboard() {
       console.error("IPC Hatası (Start/Stop):", error);
     }
   };
+
   const handleAddSerie = () => {
       navigate('/add-series');
   };
+
   const navigateToSettings = () => {
       navigate('/settings');
-  };const handleDeleteSerie = async (serie) => {
-    if (!confirm(`"${serie.title}" dizisini ve tüm dosyalarını silmek istediğine emin misin?`)) return;
+  };
+
+  const handleDeleteSerie = async (serie) => {
+    if (!confirm(t('dashboard.delete_confirm', { title: serie.title }))) return;
     try {
         const res = await window.api.invoke('file:deleteSerie', serie.folderName);
         if (res.success) {
             setSeries(prev => prev.filter(s => s.folderName !== serie.folderName));
         } else {
-            alert("Silinemedi: " + res.error);
+            alert(t('common.error') + ": " + res.error);
         }
     } catch (err) {
         console.error(err);
     }
-};
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.mainContent}>
-        <h1 style={styles.header}>Kütüphanem</h1>
+        <h1 style={styles.header}>{t('dashboard.title')}</h1>
         {series.length > 0 ? (
             <div style={styles.grid}>
             {series.map((serie) => (
@@ -77,8 +85,8 @@ export default function Dashboard() {
             </div>
         ) : (
             <div style={{color: '#666', textAlign: 'center', marginTop: '50px'}}>
-                <h2>Henüz hiç dizi yok.</h2>
-                <p>Sağ alttaki menüden ilk dizini ekle!</p>
+                <h2>{t('dashboard.no_series_title')}</h2>
+                <p>{t('dashboard.no_series_desc')}</p>
             </div>
         )}
       </div>

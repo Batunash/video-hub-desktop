@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const SeriesCard = ({ data, onClick,onDelete}) => {
+const SeriesCard = ({ data, onClick, onDelete}) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const styles = getStyles(isHovered);
+  
   let imageSource;
   if (data.fullPosterPath) {
       imageSource = `media://${data.fullPosterPath}`;
@@ -11,6 +14,7 @@ const SeriesCard = ({ data, onClick,onDelete}) => {
   } else {
       imageSource = 'https://via.placeholder.com/300x450?text=No+Img';
   }
+
   return (
     <div 
       style={styles.card} 
@@ -26,7 +30,7 @@ const SeriesCard = ({ data, onClick,onDelete}) => {
             e.stopPropagation(); 
             onDelete(data);      
           }}
-          title="Diziyi Sil"
+          title={t('dashboard.delete_tooltip')}
         >
           🗑️
         </button>
@@ -39,6 +43,7 @@ const SeriesCard = ({ data, onClick,onDelete}) => {
     </div>
   );
 };
+
 const getStyles = (isHovered) => ({
   card: {
     position: 'relative',
@@ -103,4 +108,5 @@ const getStyles = (isHovered) => ({
     transition: '0.2s'
   },
 });
+
 export default SeriesCard;

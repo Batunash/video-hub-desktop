@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const TransferList = ({ transfers }) => {
+  const { t } = useTranslation();
+
   if (Object.keys(transfers).length === 0) return null;
 
   return (
@@ -12,7 +15,9 @@ const TransferList = ({ transfers }) => {
                     <div style={styles.transferInfo}>
                         <span style={styles.fileName} title={fileName}>{fileName}</span>
                         <span style={styles.percentText}>
-                            {item.status === 'error' ? 'HATA' : item.status === 'completed' ? 'TAMAMLANDI' : `%${item.percent.toFixed(0)}`}
+                            {item.status === 'error' ? t('transfer.status_error') : 
+                             item.status === 'completed' ? t('transfer.status_completed') : 
+                             `%${item.percent.toFixed(0)}`}
                         </span>
                     </div>
                     <div style={styles.progressBarBg}>

@@ -1,4 +1,5 @@
 import { formatTmdbData } from '../utils/formatters';
+import i18n from '../utils/i18n'; 
 
 const getApiKeyFromSettings = async () => {
     const settings = await window.api.invoke('settings:get');
@@ -13,10 +14,11 @@ export const fetchSeriesByImdb = async (imdbId) => {
   if (!API_KEY) {
       throw new Error("TMDB API Key eksik. Lütfen Ayarlar'dan giriniz.");
   }
+  const currentLang = i18n.language || 'tr-TR'; 
   
   try {
     const findResponse = await fetch(
-      `${BASE_URL}/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id&language=tr-TR`
+      `${BASE_URL}/find/${imdbId}?api_key=${API_KEY}&external_source=imdb_id&language=${currentLang}`
     );
     
     if (!findResponse.ok) throw new Error("Find API hatası");
@@ -34,7 +36,7 @@ export const fetchSeriesByImdb = async (imdbId) => {
         return null; 
     }
     const detailResponse = await fetch(
-      `${BASE_URL}/${mediaType}/${tmdbId}?api_key=${API_KEY}&language=tr-TR`
+      `${BASE_URL}/${mediaType}/${tmdbId}?api_key=${API_KEY}&language=${currentLang}`
     );
     
     if (!detailResponse.ok) {  

@@ -1,12 +1,17 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete,uploadDisabled }) => {
+const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete, uploadDisabled }) => {
+  const { t } = useTranslation();
+
   return (
     <div style={styles.episodeSection}>
         <div style={styles.header}>
-            <h3 style={{color: 'white', margin:0}}>{activeSeason} Bölümleri</h3>
+            <h3 style={{color: 'white', margin:0}}>
+                {t('detail.episodes_title', { season: activeSeason })}
+            </h3>
             {!uploadDisabled && (
-                <button style={styles.uploadBtn} onClick={onUpload}>☁️ Dosya Yükle</button>
+                <button style={styles.uploadBtn} onClick={onUpload}>{t('detail.upload_file')}</button>
             )}
         </div>
 
@@ -22,7 +27,7 @@ const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete,uploadDisabled
                          <button 
                             style={styles.deleteEpBtn}
                             onClick={() => onDelete(ep.path)}
-                            title="Dosyayı Sil"
+                            title={t('common.delete')}
                         >
                             🗑️
                         </button>
@@ -30,7 +35,7 @@ const EpisodeList = ({ episodes, activeSeason, onUpload, onDelete,uploadDisabled
                 ))}
             </div>
         ) : (
-            <div style={styles.emptyState}>Bu sezonda henüz bölüm yok.</div>
+            <div style={styles.emptyState}>{t('detail.empty_season')}</div>
         )}
     </div>
   );
