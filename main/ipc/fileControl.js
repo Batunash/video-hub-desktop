@@ -1,15 +1,24 @@
 const { ipcMain } = require("electron");
-const path= require('path');
-const fs = require("fs");
-const { MEDIA_DIR } = require('../../config/config');
+const path = require('path');
+const fs = require("fs");1
+const { getSettings } = require("../utils/handlesettings"); 
 const episodeQueue = require("../utils/episodeQueue");
-const { downloadImage} =require("../utils/imageDownloader");
-const db=require("../../backend/src/config/database");
-const eq = new episodeQueue(MEDIA_DIR);
-const {VIDEO_EXTS}=require("../../backend/src/constants");
+const { downloadImage } = require("../utils/imageDownloader");
+const db = require("../../backend/src/config/database");
+const axios = require('axios');
+const { VIDEO_EXTS } = require("../../backend/src/constants");
+
 module.exports = function registerFileControl() {
+        const getMediaDir = () => {
+        const settings = getSettings();
+        return settings.MEDIA_DIR;
+    };
+
     ipcMain.handle("file:createSerie", async (event, { serieName, metadata }) => {
-        if (!fs.existsSync(MEDIA_DIR)) return { success: false, message: "Arşiv klasörü bulunamadı." };
+        const MEDIA_DIR = getMediaDir(); 
+        if (!MEDIA_DIR || !fs.existsSync(MEDIA_DIR)) {
+            return { success: false, message: "Arşiv klasörü bulunamadı. Lütfen Ayarlar'dan seçiniz." };
+        }
         
         const safeName = serieName.replace(/[<>:"/\\|?*]+/g, '');
         const fullPath = path.join(MEDIA_DIR, safeName);
@@ -18,7 +27,7 @@ module.exports = function registerFileControl() {
 
         try {
             fs.mkdirSync(fullPath, { recursive: true });
-            let localImagePath = null;
+            let localImagePath = null;            
             if (metadata.image) {
                 const imageExt = path.extname(metadata.image) || '.jpg';
                 const imageFileName = `poster${imageExt}`;
@@ -36,19 +45,22 @@ module.exports = function registerFileControl() {
                     console.error("Resim işleme hatası:", imgErr);
                 }
             }
+
             const jsonContent = {
                 ...metadata,
                 folderName: safeName,
                 localPoster: localImagePath,
                 createdAt: new Date().toISOString()
             };
+            
             fs.writeFileSync(path.join(fullPath, 'metadata.json'), JSON.stringify(jsonContent, null, 2));
+            
             if (metadata.numberOfSeasons > 0) {
                 for (let i = 1; i <= metadata.numberOfSeasons; i++) {
                     const seasonPath = path.join(fullPath, `Season ${i}`);
                     if (!fs.existsSync(seasonPath)) fs.mkdirSync(seasonPath);
                 }
-            }
+            }            
             try {
                 db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
             } catch (dbErr) {
@@ -62,14 +74,16 @@ module.exports = function registerFileControl() {
             return { success: false, message: "Hata", error: err.message };
         }
     });
+
     ipcMain.handle("file:createSeason", (event, data) => {
-        if (!fs.existsSync(MEDIA_DIR)) return { isExist: false, message: "Arşiv yok" };
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR || !fs.existsSync(MEDIA_DIR)) return { isExist: false, message: "Arşiv klasörü ayarlanmamış." };
+        
         const fullPath = path.join(MEDIA_DIR, data.serieName, data.seasonId);
         
         try {
             fs.mkdirSync(fullPath, { recursive: true });
             db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
-
             return { isExist: true, message: "Oluşturuldu", path: fullPath };
         } catch (err) {
             return { isExist: false, message: "Hata", error: err.message };
@@ -77,20 +91,27 @@ module.exports = function registerFileControl() {
     });
 
     ipcMain.handle("file:addEpisode", (event, data) => {
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR) return { ok: false, message: "Medya klasörü ayarlı değil" };
+
         const fullPath = path.join(MEDIA_DIR, data.serieName, data.seasonId);
         if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
+        const eq = new episodeQueue(MEDIA_DIR); 
         
         eq.addVideos(
             data.videos.map(f => ({ ...f, filePath: f.path, destFolder: fullPath, event }))
         );
+        
         setTimeout(() => {
              db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
         }, 3000);
 
         return { ok: true, message: "Kuyruğa eklendi" };
     });
+
     ipcMain.handle("file:getSeries", async () => {
-        if (!fs.existsSync(MEDIA_DIR)) return [];
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR || !fs.existsSync(MEDIA_DIR)) return [];
         try {
             const items = fs.readdirSync(MEDIA_DIR);
             const seriesList = [];
@@ -114,7 +135,11 @@ module.exports = function registerFileControl() {
             return [];
         }
     });
+
     ipcMain.handle("file:getSeriesDetail", async (event, folderName) => {
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR) return { error: "Medya klasörü yok" };
+
         const seriePath = path.join(MEDIA_DIR, folderName);
         if (!fs.existsSync(seriePath)) return { error: "Dizi bulunamadı" };
 
@@ -142,7 +167,11 @@ module.exports = function registerFileControl() {
             return { error: err.message };
         }
     });
+
     ipcMain.handle("file:getEpisodes", async (event, { folderName, season }) => {
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR) return [];
+
         const seasonPath = path.join(MEDIA_DIR, folderName, season);
         if (!fs.existsSync(seasonPath)) return [];
         try {
@@ -158,19 +187,22 @@ module.exports = function registerFileControl() {
             return [];
         }
     });
+
     ipcMain.handle("file:deleteSerie", async (event, folderName) => {
+        const MEDIA_DIR = getMediaDir();
         const targetPath = path.join(MEDIA_DIR, folderName);
         if (!fs.existsSync(targetPath)) return { success: false, message: "Klasör yok" };
         try {
             fs.rmSync(targetPath, { recursive: true, force: true });
             db.deleteSeriesByPath(targetPath);
-            
             return { success: true };
         } catch (err) {
             return { success: false, error: err.message };
         }
     });
+
     ipcMain.handle("file:deleteSeason", async (event, { folderName, season }) => {
+        const MEDIA_DIR = getMediaDir();
         const targetPath = path.join(MEDIA_DIR, folderName, season);
         try {
             fs.rmSync(targetPath, { recursive: true, force: true });
@@ -180,6 +212,7 @@ module.exports = function registerFileControl() {
             return { success: false, error: err.message };
         }
     });
+
     ipcMain.handle("file:deleteEpisode", async (event, filePath) => {
         try {
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -189,12 +222,48 @@ module.exports = function registerFileControl() {
             return { success: false, error: err.message };
         }
     });
+
     ipcMain.handle("file:syncDatabase", async () => {
+        const MEDIA_DIR = getMediaDir();
+        if (!MEDIA_DIR) return { success: false, error: "Medya klasörü ayarlanmamış" };
+        
         try {
             db.syncFilesystemToDatabase(MEDIA_DIR, VIDEO_EXTS);
             return { success: true, message: "Senkronizasyon tamamlandı." };
         } catch (err) {
             return { success: false, error: err.message };
+        }
+    });
+    ipcMain.handle("file:fetchMetadata", async (event, { imdbId, lang }) => {
+        const settings = getSettings();
+        const apiKey = settings.TMDB_API_KEY || settings.VITE_TMDB_API_KEY;
+        const language = lang || 'tr-TR';
+
+        if (!apiKey) return { success: false, message: "API Key bulunamadı." };
+
+        try {
+            const findUrl = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${apiKey}&external_source=imdb_id&language=${language}`;
+            const findRes = await axios.get(findUrl);
+            const findData = findRes.data;
+
+            let mediaType, tmdbId;
+            if (findData.tv_results?.length > 0) {
+                mediaType = 'tv';
+                tmdbId = findData.tv_results[0].id;
+            } else if (findData.movie_results?.length > 0) {
+                mediaType = 'movie';
+                tmdbId = findData.movie_results[0].id;
+            } else {
+                return { success: false, message: "TMDB'de içerik bulunamadı." };
+            }
+            const detailUrl = `https://api.themoviedb.org/3/${mediaType}/${tmdbId}?api_key=${apiKey}&language=${language}`;
+            const detailRes = await axios.get(detailUrl);
+            
+            return { success: true, data: detailRes.data, mediaType };
+            
+        } catch (error) {
+            console.error("TMDB Fetch Error:", error.message);
+            return { success: false, message: "TMDB bağlantı hatası." };
         }
     });
 };

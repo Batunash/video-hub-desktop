@@ -1,17 +1,20 @@
 const { ipcMain,dialog} = require("electron");
 
 module.exports = function registerDialogManager(){
-  ipcMain.handle("dialog:openVideoFiles", async () => {
-    const result = await dialog.showOpenDialog({
-      title: "Video seç",
-      properties: ["openFile", "multiSelections"],
-      filters: [{ name: "Video Files", extensions: ["mp4", "mkv", "avi", "mov"] }]
+    ipcMain.handle('dialog:openVideoFiles', async (event, args) => {
+        const allowMultiple = args?.multiSelections !== false; 
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            properties: allowMultiple ? ['openFile', 'multiSelections'] : ['openFile'],
+            filters: [
+                { name: 'Movies', extensions: ['mkv', 'avi', 'mp4', 'mov'] }
+            ]
+        });
+        if (canceled) {
+            return [];
+        } else {
+            return filePaths;
+        }
     });
-
-    if (result.canceled) return [];
-
-    return result.filePaths; 
-  });
   ipcMain.handle("dialog:openFileImage", async () => {
         const { canceled, filePaths } = await dialog.showOpenDialog({
             properties: ['openFile'],

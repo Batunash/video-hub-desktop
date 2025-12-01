@@ -101,6 +101,7 @@
     "restarting": "Restarting...",
     "restart_confirm": "Settings saved. Restart application?",
     "dir_warning": "Please select the Media Directory!",
-    "logout_confirm": "Are you sure you want to log out?"
+    "logout_confirm": "Are you sure you want to log out?",
+    "tmdb_disclaimer": "This product uses the TMDB API but is not endorsed or certified by TMDB."
   }
 }

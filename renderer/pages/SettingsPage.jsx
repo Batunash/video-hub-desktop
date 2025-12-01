@@ -26,7 +26,6 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
                 ...settings,
                 TMDB_API_KEY: realApiKey 
             }));
-            console.log("IP Adresi isteniyor..."); 
             const netInfo = await window.api.invoke('server:getNetworkInfo');
             
             setNetworkInfo({ 
@@ -189,6 +188,18 @@ const SettingsPage = ({ isSetupRequired, onConfigUpdate }) => {
             </div>
         </div>
 
+        {/* TMDB Disclaimer */}
+        <div style={styles.tmdbContainer}>
+            <img 
+                src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" 
+                alt="TMDB Logo" 
+                style={{ height: '15px', marginBottom: '8px' }}
+            />
+            <p style={{ fontSize: '0.75rem', color: '#555', margin: 0 }}>
+                {t('settings.tmdb_disclaimer')}
+            </p>
+        </div>
+
         <div style={styles.footer}>
             <button style={styles.saveBtn} onClick={handleSave} disabled={loading}>
                 {loading ? t('settings.restarting') : t('settings.save_restart')}
@@ -217,6 +228,7 @@ const styles = {
   saveBtn: { padding: '15px 40px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' },
   connectionBox: {backgroundColor: '#222',padding: '15px',borderRadius: '8px',border: '1px dashed #444',marginTop: '10px'  },
   langBtn: { padding: '5px 10px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
+  tmdbContainer: { textAlign: 'center', marginBottom: '20px', opacity: 0.6 },
 };
 
 export default SettingsPage;

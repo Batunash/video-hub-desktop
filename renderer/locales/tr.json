@@ -101,6 +101,7 @@
     "restarting": "Yeniden Başlatılıyor...",
     "restart_confirm": "Ayarlar kaydedildi. Uygulama yeniden başlatılsın mı?",
     "dir_warning": "Lütfen Medya Klasörünü seçin!",
-    "logout_confirm": "Çıkış yapmak istediğine emin misin?"
+    "logout_confirm": "Çıkış yapmak istediğine emin misin?",
+    "tmdb_disclaimer": "Bu ürün TMDB API kullanmaktadır ancak TMDB tarafından onaylanmamış veya sertifikalandırılmamıştır."
   }
 }

@@ -18,12 +18,16 @@ const validChannels = [
   "file:deleteSeason",
   "file:deleteEpisode",  
   "file:syncDatabase",
+  "file:fetchMetadata",
   "dialog:openVideoFiles",
   "dialog:openFileImage",
   "dialog:openDirectory",
   "settings:get",
   "settings:save",
-  "app:restart"
+  "app:restart",
+  "window:minimize",
+  "window:maximize",
+  "window:close"
 ];
 
 contextBridge.exposeInMainWorld("api", {

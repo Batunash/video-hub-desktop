@@ -1,9 +1,13 @@
 {
-  "name": "video-hub-desktop",
+  "name": "zenith-stream-desktop",
+  "productName": "Zenith Stream",
   "version": "1.0.0",
-  "description": "My Home Media Server",
+  "description": "Premium Video Streaming Experience",
   "main": "main/main.js",
-  "author": "Batu",
+  "author": {
+    "name": "Batunash",
+    "email": "okullubatuhan@gmail.com"
+  },
   "license": "ISC",
   "type": "commonjs",
   "scripts": {
@@ -11,11 +15,14 @@
     "start": "electron .",
     "build": "vite build",
     "dist": "npm run build && electron-builder",
-    "rebuild": "electron-rebuild"
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:all": "npm run build && electron-builder -wjl"
   },
   "build": {
-    "appId": "com.batu.videohub",
-    "productName": "Video Hub",
+    "appId": "com.batunash.zenithstream",
+    "productName": "Zenith Stream",
+    "copyright": "Copyright © 2025 batunash",
     "directories": {
       "output": "release"
     },
@@ -25,22 +32,42 @@
       "dist/**/*",
       "main/**/*",
       "backend/**/*",
-      "config/**/*"
+      "config/**/*",
+      "assets/**/*"
     ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Zenith Stream",
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Video"
+      "category": "Video",
+      "icon": "assets/icon.png",
+      "artifactName": "${name}-${version}-Linux-${arch}.${ext}",
+      "executableName": "zenith-stream-desktop",
+      "synopsis": "Premium Video Streaming App"
     },
-    "win": {
-      "target": "nsis"
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png",
+      "category": "public.app-category.entertainment",
+      "artifactName": "${productName}-${version}-Mac.${ext}"
     }
   },
   "dependencies": {
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
@@ -53,13 +80,14 @@
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.3.8",
     "react-i18next": "^16.3.5",
-    "react-router-dom": "^7.9.6"
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.9.6",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^39.2.1",
+    "electron": "39.2.1",
     "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9",
     "vite": "^7.2.2"
   }
 }

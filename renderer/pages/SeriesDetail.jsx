@@ -88,7 +88,11 @@ const SeriesDetail = () => {
 
   const handleUploadEpisode = async () => {
     if (!activeSeason) return alert(t('detail.select_season_warn'));
-    const files = await window.api.invoke("dialog:openVideoFiles");
+    const isMovie = metadata?.type === 'movie';
+    const files = await window.api.invoke("dialog:openVideoFiles", { 
+        multiSelections: !isMovie 
+    });
+
     if (!files || !files.length) return;
     const initialTransfers = {};
     files.forEach(path => initialTransfers[path] = { percent: 0, status: 'pending' });
@@ -125,7 +129,7 @@ const SeriesDetail = () => {
         seasonCount={seasons.length} 
         onBack={() => navigate('/')} 
       />
-      <div style={{ padding: '0 40px 50px 40px' }}>
+      <div style={{ padding: '0 40px 50px 40px' ,marginTop:'30px'}}>
         <SeasonList 
             seasons={seasons} 
             activeSeason={activeSeason} 

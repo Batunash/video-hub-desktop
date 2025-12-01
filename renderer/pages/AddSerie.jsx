@@ -22,14 +22,11 @@ const AddSeriesPage = () => {
     rating: '',
     overview: ''
   });
-
-  // --- DÜZELTİLEN KISIM (Tekrar eden kodlar silindi) ---
   useEffect(() => {
     window.api.invoke('settings:get').then(cfg => {
       const apiKey = cfg.TMDB_API_KEY || cfg.VITE_TMDB_API_KEY;
       const hasKey = apiKey && apiKey.length > 10;
       setHasApiKey(hasKey);
-      // Eğer API Key yoksa direkt manuel tabına at
       if (!hasKey) setActiveTab('manual');
     });
   }, []);
@@ -71,7 +68,6 @@ const AddSeriesPage = () => {
         });
         
         if (res.success) {
-            // Başarı mesajı çevirisi
             const typeText = contentType === 'movie' ? t('add_series.type_movie') : t('add_series.type_serie');
             alert(t('add_series.success_added', { type: typeText }));
             navigate('/');

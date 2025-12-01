@@ -7,7 +7,7 @@ const registerFileControl = require("./ipc/fileControl");
 const registerDialogManager = require("./ipc/dialogManager");
 const registerAuthControl = require("./ipc/authControl");
 const registerSettingsControl = require("./ipc/settingsControl")
-
+const registerWindowControl = require("./ipc/windowControl");
 let mainWindow;
 
 function createWindow() {
@@ -16,7 +16,9 @@ function createWindow() {
     height: 850,
     backgroundColor: "#0d0d0d",
     autoHideMenuBar: true,
-
+    frame: false,
+    title: "Zenith Stream",
+    icon: path.join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, "preLoad.js"),
       contextIsolation: true,
@@ -37,11 +39,18 @@ function registerIpcHandlers() {
   registerDialogManager();
   registerAuthControl();
   registerSettingsControl();
+  registerWindowControl();
 }
 app.whenReady().then(() => {
-  protocol.handle('media', (request) => {
-    const filePath = request.url.slice('media://'.length);
-    return net.fetch('file://' + decodeURIComponent(filePath));
+  
+ protocol.registerFileProtocol("media", (request, callback) => {
+    let filePath = request.url.replace("media://", "");
+    filePath = decodeURIComponent(filePath);
+    if (!path.isAbsolute(filePath)) {
+      filePath = path.join(app.getPath("userData"), filePath);
+    }
+
+    callback({ path: filePath });
   });
 
   registerIpcHandlers();
