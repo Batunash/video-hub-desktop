@@ -1,11 +1,12 @@
 const { app } = require('electron'); 
 const path = require("path");
 const fs = require('fs');
+const crypto = require('crypto');
 const CONFIG_PATH = path.join(app.getPath('userData'), 'settings.json');
 const DEFAULT_CONFIG = {
     PORT: '5000',
     MEDIA_DIR: path.join(app.getPath('home'), 'Desktop', 'Archive'),
-    JWT_SECRET: 'gizli_anahtar_degistir',
+    JWT_SECRET: crypto.randomBytes(32).toString('hex'),
     TMDB_API_KEY: ''
 };
 
